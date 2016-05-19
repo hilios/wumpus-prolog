@@ -5,29 +5,31 @@
 :- abolish(grab/2).
 :- abolish(actions/1).
 :- abolish(visited/2).
+:- abolish(runloop/1).
 
-:- dynamic
+:- dynamic([
   hunter/3,
   wumpus/3,
   pit/2,
   gold/2,
   grab/2,
   actions/1,
-  visited/2.
+  visited/2
+]).
 
 % Defines the world NxM matrix.
 world(4, 4).
 
-%   +---+---+---+---+
-% 4 |   |   |   | P |
-%   +---+---+---+---+
-% 3 | W |   | P |   |
-%   +---+---+---+---+
-% 2 |   |   |   |   |
-%   +---+---+---+---+
-% 1 | H | G | P |   |
-%   +---+---+---+---+
-%     1   2   3   4
+%     +---+---+---+---+
+%   4 |   |   |   | P |
+%     +---+---+---+---+
+%   3 | W |   | P |   |
+%     +---+---+---+---+
+%   2 |   |   |   |   |
+%     +---+---+---+---+
+%   1 | H | G | P |   |
+%     +---+---+---+---+
+%       1   2   3   4
 
 % The initial database.
 hunter(1, 1, east).
@@ -39,17 +41,17 @@ gold(2, 1).
 
 visited(1, 1).
 
+% ---------------------------- %
+% Environment predicates       %
+% ---------------------------- %
 has_gold(yes) :- visited(X, Y), grab(X, Y), gold(X, Y), !.
 has_gold(no).
 
 has_arrows(yes) :- false.
 has_arrows(no).
 
-% ---------------------------- %
-% Environment predicates       %
-% ---------------------------- %
 % If has gold it has glitter.
-has_glitter(yes) :- hunter(X, Y, _), gold(X, Y).
+has_glitter(yes) :- has_gold(no), hunter(X, Y, _), gold(X, Y).
 has_glitter(no).
 
 % Senses breeze if adjacent block has a pit.
@@ -110,42 +112,46 @@ move(X, Y) :-
   assertz( visited(X, Y) ),
   hunter(_, _, D),
   retractall( hunter(_, _, D) ), % Reset the hunter pos then reassign.
-  assertz( actions(move) ),
-  asserta( hunter(X, Y, D) ); !.
+  asserta( hunter(X, Y, D) ),
+  !.
+move(X, Y) :- format('Cannot move to ~dx~d~n', [X, Y]).
 
 % Shoot at position and kill wumpus if its there
 shoot(X, Y) :-
   has_arrows(yes),
-  retractall( has_arrows(yes) ),
-  asserta( has_arrows(no) ),
   wumpus(X, Y, alive),
   retractall( wumpus(X, Y, alive) ),
-  asserta( wumpus(X, Y, dead) ).
+  asserta( wumpus(X, Y, dead) ),
+  !.
+shoot(_, _) :- write('I don not have arrows anymore.').
 
 % Player's actions.
 action(grab) :-
-  assertz( actions(grab) ),
-  has_glitter(yes),
-  hunter(X, Y, _),
-  grab(X, Y),
-  retractall( has_gold(_) ),
-  asserta( has_gold(yes) ).
+  hunter(X, Y, _), assertz( grab(X, Y) ), \+ gold(X, Y),
+  write('- Nothing to grab'), nl.
+
+action(grab) :-
+  hunter(X, Y, _), assertz( grab(X, Y) ), gold(X, Y),
+  write('- Found gold!'), nl,
+  retractall( gold(X, Y) ).
 
 action(turnleft) :-
-  write('Turn left'), nl, assertz( actions(turn) ),
-  hunter(X, Y, D),
-  direction(D, A),
-  direction(Z, abs(A + 90) mod 360),
+  write('- Turn left'), nl, assertz( actions(turn) ),
+  hunter(X, Y, CD),
+  direction(CD, A),
+  Left is abs(A + 90) mod 360,
+  direction(D, Left),
   retractall( hunter(_, _, _) ),
-  asserta( hunter(X, Y, Z) ), !.
+  asserta( hunter(X, Y, D) ).
 
 action(turnright) :-
-  write('Turn right'), nl, assertz( actions(turn) ),
-  hunter(X, Y, D),
-  direction(D, A),
-  direction(Z, abs(A - 90) mod 360),
+  write('- Turn right'), nl, assertz( actions(turn) ),
+  hunter(X, Y, CD),
+  direction(CD, A),
+  Right is abs(A - 90) mod 360,
+  direction(D, Right),
   retractall( hunter(_, _, _) ),
-  asserta( hunter(X, Y, Z) ), !.
+  asserta( hunter(X, Y, D) ).
 
 action(forward) :- hunter(X, Y, east),  E is X+1, move(E, Y), !.
 action(forward) :- hunter(X, Y, north), N is Y+1, move(X, N), !.
@@ -186,33 +192,45 @@ has_wumpus(X, Y) :-
 % ---------------------------- %
 % Define heuristics            %
 % ---------------------------- %
-heuristic(_) :-
-  has_glitter(yes), action(grab);
-  action(forward); !.
+heuristic(avoid_pit) :-
+  write('- Avoiding pit'), nl,
+  hunter(X, Y, _), assertz( breeze_at(X, Y) ),
+  action(turnleft),
+  action(turnleft),
+  action(forward).
+
+heuristic(avoid_wumpus) :-
+  write('- Avoiding wumpus'), nl,
+  hunter(X, Y, _), assertz( stench_at(X, Y) ),
+  action(turnleft),
+  action(turnleft),
+  action(forward).
+
+heuristic(get_back) :-
+  write('- Get back'), nl,
+  action(turnleft),
+  action(turnleft),
+  action(forward).
+
 %
-% heuristic(avoid_pit) :-
-%   hunter(X, Y, _), assertz( breeze_at(X, Y) ),
-%   action(turnleft), action(turnleft), action(forward).
-%
-% heuristic(avoid_wumpus) :-
-%   hunter(X, Y, _), assertz( stench_at(X, Y) ),
-%   action(turnleft), action(turnleft), action(forward).
-%
-% heuristic(avoid_bump) :-
-%   action(turnleft), action(turnleft), action(forward).
-%
-% heuristic(get_back) :-
-%   action(turnleft), action(turnleft), action(forward).
+take_action([_, _, yes, _, _], grab) :- !.
+take_action([_, _, _, yes, _], turnleft) :- !.
+take_action([_, _, _, _, _],   forward) :- !.
 
 % Run the game.
 run :- runloop(0).
 
-runloop(50) :- !.
+runloop(5) :- !.
 runloop(T) :-
   hunter(X, Y, D), perceptions(P),
-  format('~d: At ~dx~d facing ~p, senses ~p.~n', [T, X, Y, D, P]),
-  heuristic(_),
+  % perceptions([Stench, Breeze, Glitter, Bump, Scream])
+  format('~d: At ~dx~d facing ~p, senses ~p. ', [T, X, Y, D, P]),
+  take_action(P, A),
+  format('I\'m doing ~p.~n', [A]),
+  action(A),
   % Iterate
-  is_alive,
-  Ti is T + 1,
-  runloop(Ti).
+  is_alive -> (
+    Ti is T + 1,
+    runloop(Ti)
+  );
+  write('You have deceased'), !.
