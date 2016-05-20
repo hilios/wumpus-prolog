@@ -107,6 +107,7 @@ is_in_bounds(X, Y) :-
 
 % Moves the Player to a new position.
 move(X, Y) :-
+  assertz(actions(move)),
   is_in_bounds(X, Y),
   format("- Moving to ~dx~d~n", [X,Y]),
   assertz( visited(X, Y) ),
@@ -118,6 +119,7 @@ move(X, Y) :- format('Cannot move to ~dx~d~n', [X, Y]).
 
 % Shoot at position and kill wumpus if its there
 shoot(X, Y) :-
+  assertz(actions(shoot)),
   has_arrows(yes),
   wumpus(X, Y, alive),
   retractall( wumpus(X, Y, alive) ),
@@ -127,15 +129,18 @@ shoot(_, _) :- write('I don not have arrows anymore.').
 
 % Player's actions.
 action(grab) :-
+  assertz(actions(grab)),
   hunter(X, Y, _), assertz( grab(X, Y) ), \+ gold(X, Y),
   write('- Nothing to grab'), nl.
 
 action(grab) :-
+  assertz(actions(grab)),
   hunter(X, Y, _), assertz( grab(X, Y) ), gold(X, Y),
   write('- Found gold!'), nl,
   retractall( gold(X, Y) ).
 
 action(turnleft) :-
+  assertz(actions(turn)),
   write('- Turn left'), nl, assertz( actions(turn) ),
   hunter(X, Y, CD),
   direction(CD, A),
@@ -145,6 +150,7 @@ action(turnleft) :-
   asserta( hunter(X, Y, D) ).
 
 action(turnright) :-
+  assertz(actions(turn)),
   write('- Turn right'), nl, assertz( actions(turn) ),
   hunter(X, Y, CD),
   direction(CD, A),
@@ -162,6 +168,9 @@ action(shoot) :- hunter(X, Y, east),  E is X+1, shoot(E, Y), !.
 action(shoot) :- hunter(X, Y, north), N is Y+1, shoot(X, N), !.
 action(shoot) :- hunter(X, Y, west),  W is X-1, shoot(W, Y), !.
 action(shoot) :- hunter(X, Y, south), S is Y-1, shoot(X, S), !.
+
+action([]).
+action([A|Actions]) :- action(A), action(Actions).
 
 % Action cost function.
 calculatecost(X, Y, C) :- cost(X, Y, 0, C).
@@ -194,28 +203,26 @@ has_wumpus(X, Y) :-
 % ---------------------------- %
 heuristic(avoid_pit) :-
   write('- Avoiding pit'), nl,
-  hunter(X, Y, _), assertz( breeze_at(X, Y) ),
-  action(turnleft),
-  action(turnleft),
-  action(forward).
+  hunter(X, Y, _), assertz( breeze_at(X, Y) ).
 
 heuristic(avoid_wumpus) :-
   write('- Avoiding wumpus'), nl,
-  hunter(X, Y, _), assertz( stench_at(X, Y) ),
-  action(turnleft),
-  action(turnleft),
-  action(forward).
+  hunter(X, Y, _), assertz( stench_at(X, Y) ).
 
 heuristic(get_back) :-
-  write('- Get back'), nl,
-  action(turnleft),
-  action(turnleft),
-  action(forward).
+  write('- Get back'), nl.
 
-%
-take_action([_, _, yes, _, _], grab) :- !.
-take_action([_, _, _, yes, _], turnleft) :- !.
-take_action([_, _, _, _, _],   forward) :- !.
+% perceptions([Stench, Breeze, Glitter, Bump, Scream])
+take_action([_, _, yes, _, _], grab)      :- !.
+take_action([_, _, _, yes, _], A) :-
+  A = [turnleft],
+  !.
+take_action([_, yes, _, _, _], A) :-
+  heuristic(avoid_pit),
+  A = [turnleft, turnleft, forward],
+  !.
+
+take_action([_, _, _, _, _],   forward)   :- !.
 
 % Run the game.
 run :- runloop(0).
@@ -223,7 +230,6 @@ run :- runloop(0).
 runloop(5) :- !.
 runloop(T) :-
   hunter(X, Y, D), perceptions(P),
-  % perceptions([Stench, Breeze, Glitter, Bump, Scream])
   format('~d: At ~dx~d facing ~p, senses ~p. ', [T, X, Y, D, P]),
   take_action(P, A),
   format('I\'m doing ~p.~n', [A]),
@@ -233,4 +239,5 @@ runloop(T) :-
     Ti is T + 1,
     runloop(Ti)
   );
-  write('You have deceased'), !.
+  write('You have deceased'),
+  !.
