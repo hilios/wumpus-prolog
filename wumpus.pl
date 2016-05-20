@@ -32,26 +32,43 @@ world(4, 4).
 %       1   2   3   4
 
 % The initial database.
+% hunter(1, 1, east).
+% wumpus(1, 3, alive).
+% pit(3, 1).
+% pit(3, 3).
+% pit(4, 4).
+% gold(2, 1).
+
+%     +---+---+---+---+
+%   4 |   |   |   | G |
+%     +---+---+---+---+
+%   3 |   |   |   |   |
+%     +---+---+---+---+
+%   2 |   |   |   |   |
+%     +---+---+---+---+
+%   1 | H |   |   |   |
+%     +---+---+---+---+
+%       1   2   3   4
+
+% The initial database.
 hunter(1, 1, east).
-wumpus(1, 3, alive).
-pit(3, 1).
-pit(3, 3).
-pit(4, 4).
-gold(2, 1).
+gold(4, 4).
 
 visited(1, 1).
 
 % ---------------------------- %
 % Environment predicates       %
 % ---------------------------- %
-has_gold(yes) :- visited(X, Y), grab(X, Y), gold(X, Y), !.
+has_gold(yes) :- grab(X, Y), gold(X, Y), !.
 has_gold(no).
 
 has_arrows(yes) :- false.
 has_arrows(no).
 
+% Perceptions
+% ===========
 % If has gold it has glitter.
-has_glitter(yes) :- has_gold(no), hunter(X, Y, _), gold(X, Y).
+has_glitter(yes) :- has_gold(G), G == no, hunter(X, Y, _), gold(X, Y), !.
 has_glitter(no).
 
 % Senses breeze if adjacent block has a pit.
@@ -91,7 +108,7 @@ is_alive :- \+ is_dead.
 % Returns the current percetions
 perceptions([Stench, Breeze, Glitter, Bump, Scream]) :-
   has_stench(Stench), has_breeze(Breeze), has_glitter(Glitter),
-  has_bump(Bump), has_scream(Scream).
+  has_bump(Bump), has_scream(Scream), !.
 
 % Returns the angle given its direction.
 direction(east,  0).
@@ -135,9 +152,8 @@ action(grab) :-
 
 action(grab) :-
   assertz(actions(grab)),
-  hunter(X, Y, _), assertz( grab(X, Y) ), gold(X, Y),
-  write('- Found gold!'), nl,
-  retractall( gold(X, Y) ).
+  hunter(X, Y, _), assertz( grab(X, Y) ), has_gold(no), gold(X, Y),
+  write('- Found gold!'), nl.
 
 action(turnleft) :-
   assertz(actions(turn)),
@@ -159,22 +175,24 @@ action(turnright) :-
   retractall( hunter(_, _, _) ),
   asserta( hunter(X, Y, D) ).
 
-action(forward) :- hunter(X, Y, east),  E is X+1, move(E, Y), !.
-action(forward) :- hunter(X, Y, north), N is Y+1, move(X, N), !.
-action(forward) :- hunter(X, Y, west),  W is X-1, move(W, Y), !.
-action(forward) :- hunter(X, Y, south), S is Y-1, move(X, S), !.
+action(forward) :- hunter(X, Y, east),  E is X + 1, move(E, Y), !.
+action(forward) :- hunter(X, Y, north), N is Y + 1, move(X, N), !.
+action(forward) :- hunter(X, Y, west),  W is X - 1, move(W, Y), !.
+action(forward) :- hunter(X, Y, south), S is Y - 1, move(X, S), !.
 
-action(shoot) :- hunter(X, Y, east),  E is X+1, shoot(E, Y), !.
-action(shoot) :- hunter(X, Y, north), N is Y+1, shoot(X, N), !.
-action(shoot) :- hunter(X, Y, west),  W is X-1, shoot(W, Y), !.
-action(shoot) :- hunter(X, Y, south), S is Y-1, shoot(X, S), !.
+action(shoot) :- hunter(X, Y, east),  E is X + 1, shoot(E, Y), !.
+action(shoot) :- hunter(X, Y, north), N is Y + 1, shoot(X, N), !.
+action(shoot) :- hunter(X, Y, west),  W is X - 1, shoot(W, Y), !.
+action(shoot) :- hunter(X, Y, south), S is Y - 1, shoot(X, S), !.
 
+action(exit) :- write('Bye, bye...'), nl, halt.
+
+% Apply a list of actions
 action([]).
 action([A|Actions]) :- action(A), action(Actions).
 
 % Action cost function.
-calculatecost(X, Y, C) :- cost(X, Y, 0, C).
-
+cost(X, Y, C) :- cost(X, Y, 0, C).
 cost(X, Y, C, FC) :- \+ visited(X,Y), has_gold(no), FC is C + 5.
 cost(X, Y, C, FC) :- visited(X,Y), has_gold(yes),   FC is C - 5.
 cost(X, Y, C, FC) :- has_pit(X, Y),                 FC is C + 100.
@@ -213,9 +231,12 @@ heuristic(get_back) :-
   write('- Get back'), nl.
 
 % perceptions([Stench, Breeze, Glitter, Bump, Scream])
-take_action([_, _, yes, _, _], grab)      :- !.
+take_action([_, _, _, _, _],   exit)   :-
+  hunter(1, 1, _), has_gold(yes), !.
+
+take_action([_, _, yes, _, _], grab) :- !.
 take_action([_, _, _, yes, _], A) :-
-  A = [turnleft],
+  A = turnleft,
   !.
 take_action([_, yes, _, _, _], A) :-
   heuristic(avoid_pit),
@@ -227,7 +248,7 @@ take_action([_, _, _, _, _],   forward)   :- !.
 % Run the game.
 run :- runloop(0).
 
-runloop(5) :- !.
+runloop(100) :- !.
 runloop(T) :-
   hunter(X, Y, D), perceptions(P),
   format('~d: At ~dx~d facing ~p, senses ~p. ', [T, X, Y, D, P]),
