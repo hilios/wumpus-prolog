@@ -5,6 +5,7 @@
 :- abolish(grab/2).
 :- abolish(actions/1).
 :- abolish(visited/2).
+:- abolish(shooted/2).
 :- abolish(runloop/1).
 
 :- dynamic([
@@ -14,6 +15,7 @@
   gold/2,
   grab/2,
   actions/1,
+  shooted/2,
   visited/2
 ]).
 
@@ -60,8 +62,8 @@ visited(1, 1).
 has_gold(yes) :- grab(X, Y), gold(X, Y), !.
 has_gold(no).
 
-has_arrows(yes) :- shoot_at(_, _), !.
-has_arrows(no).
+has_arrows(no) :- shooted(_, _), !.
+has_arrows(yes).
 
 % Perceptions
 % ===========
@@ -104,7 +106,7 @@ is_player(dead) :-
 is_player(alive).
 
 % Check Wumpus condition
-is_wumpus(alive) :- wumpus(X, Y), shoot_at(X, Y), !.
+is_wumpus(alive) :- wumpus(X, Y), shooted(X, Y), !.
 is_wumpus(dead).
 
 % Returns the current percetions
@@ -130,14 +132,12 @@ move(X, Y) :-
   !.
 move(X, Y) :- format('- Cannot move to ~dx~d~n', [X, Y]).
 
-% Shoot at position and kill wumpus if its there
+% Shoot at given position
+shoot(_, _) :- has_arrows(no), write('- I do not have arrows anymore.'), !.
 shoot(X, Y) :-
   assertz(actions(shoot)),
   has_arrows(yes),
-  assertz(shoot_at(X, Y)),
-  wumpus(X, Y),
-  !.
-shoot(_, _) :- write('I don not have arrows anymore.').
+  assertz(shooted(X, Y)).
 
 % Get all adjacent blocks
 neighbors(L) :- findall(N, neighbor(N), L).
