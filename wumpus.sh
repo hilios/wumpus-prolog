@@ -1,2 +1,2 @@
 #!/bin/bash
- prolog -f src/naive.pl -s src/main.pl -g "run."
+swipl -f $1 -s src/main.pl -g "run."
