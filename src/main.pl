@@ -140,11 +140,13 @@ shoot(X, Y) :-
   assertz(shooted(X, Y)).
 
 % Get all adjacent blocks
-neighbors(N) :- findall(A, adjacents(A), N).
-adjacents(B) :- hunter(X, Y, _), E is X+1, in_bounds(E, Y), B = [E, Y].
-adjacents(B) :- hunter(X, Y, _), N is Y+1, in_bounds(X, N), B = [X, N].
-adjacents(B) :- hunter(X, Y, _), W is X-1, in_bounds(W, Y), B = [W, Y].
-adjacents(B) :- hunter(X, Y, _), S is Y-1, in_bounds(X, S), B = [X, S].
+neighbors(N) :- findall([X, Y], neighbors(X, Y), N).
+
+% Define the adjacents blocks
+neighbors(X, Y) :- hunter(Xi, Yi, _), E is Xi+1, in_bounds(E, Yi), X is E,  Y is Yi.
+neighbors(X, Y) :- hunter(Xi, Yi, _), N is Yi+1, in_bounds(Xi, N), X is Xi, Y is N.
+neighbors(X, Y) :- hunter(Xi, Yi, _), W is Xi-1, in_bounds(W, Yi), X is W,  Y is Yi.
+neighbors(X, Y) :- hunter(Xi, Yi, _), S is Yi-1, in_bounds(Xi, S), X is Xi, Y is S.
 
 % Player's actions
 action(exit) :- write('- Bye, bye!'), nl, print_result, nl, halt.
@@ -154,7 +156,7 @@ action([shoot, X, Y]) :- shoot(X, Y).
 
 action(grab) :-
   assertz(actions(grab)),
-  hunter(X, Y, _), assertz( grab(X, Y) ),
+  hunter(X, Y, _), assertz(grab(X, Y)),
   (gold(X, Y), has_gold(no)) ->
     write('- Found gold!'), nl;
     write('- Nothing to grab'), nl.
@@ -167,12 +169,19 @@ action(random) :-
 action(noop).
 
 % Score
-score(S) :- findall(A, actions(A), As), length(As, S).
+score(S) :- findall(P, points(P), Ps), sum_list(Ps, S).
+
+points(P) :- steps(T),        P is -T.
+points(P) :- is_player(dead), P is -1000.
+points(P) :- has_gold(yes),   P is +1000.
+
+steps(S) :- findall(A, actions(A), As), length(As, S).
 
 % Print
 print_result :-
-  score(S),
+  score(S), steps(T),
   format('~n~tResult~t~40|~n'),
+  format('Steps: ~`.t ~d~40|', [T]), nl,
   format('Score: ~`.t ~d~40|', [S]), nl,
   (has_gold(yes), hunter(1, 1, _)) ->
     format('Outcome: ~`.t ~p~40|', [win]), nl;
