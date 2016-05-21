@@ -1,14 +1,23 @@
-Hunt the Wumpus <small>in Prolog</small>
+Hunt the Wumpus *in Prolog*
 ---------------
 
 Artificial intelligence agent for the Hunt the Wumpus game implemented in Prolog.
 
-#### Run:
+#### Running:
+
+Run in shell throug `swipl`:
+
+```sh
+$ ./wumpus.sh src/naive.pl
+```
+
+Using SWI Prolog interface:
 
 ```shell
-$ prolog
-
-?- [wumpus].
+$ swipl
+?- [src/main].
+true.
+?- [src/naive].
 true.
 ?- run.
 ```
