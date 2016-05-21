@@ -2,6 +2,7 @@
 % Define heuristics            %
 % ---------------------------- %
 
+% [Stench, Breeze, Glitter, Bump, Scream]
 % Grab the gold if sees it shining
 heuristic([_, _, yes, _, _], grab) :- !.
 
