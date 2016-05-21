@@ -157,13 +157,13 @@ neighbor(B) :- hunter(X, Y, _), S is Y-1, in_bounds(X, S), B = [X, S].
 
 % Player's actions
 action(grab) :-
-  assertz(actions(grab)),
   hunter(X, Y, _), assertz( grab(X, Y) ), \+ gold(X, Y),
+  assertz(actions(grab)),
   write('- Nothing to grab'), nl.
 
 action(grab) :-
-  assertz(actions(grab)),
   hunter(X, Y, _), assertz( grab(X, Y) ), has_gold(no), gold(X, Y),
+  assertz(actions(grab)),
   write('- Found gold!'), nl.
 
 action(turnleft) :-
@@ -196,24 +196,20 @@ action(shoot) :- next(X, Y), shoot(X, Y), !.
 action(shoot) :- next(X, Y), shoot(X, Y), !.
 action(shoot) :- next(X, Y), shoot(X, Y), !.
 
-action(exit) :- write('- Bye, bye...'), nl, halt.
+action(exit) :- write('- Bye, bye!'), nl, print_result, nl, halt.
 
 % Apply a list of actions
 action([]).
 action([A|Actions]) :- action(A), action(Actions).
-
-% Action cost function.
-cost(X, Y, C) :- cost(X, Y, 0, C).
-cost(X, Y, C, FC) :- \+ visited(X,Y), has_gold(no), FC is C + 5.
-cost(X, Y, C, FC) :- visited(X,Y), has_gold(yes),   FC is C - 5.
-cost(X, Y, C, FC) :- has_pit(X, Y),                 FC is C + 100.
-cost(X, Y, C, FC) :- has_wumpus(X, Y),              FC is C + 100.
 
 % ---------------------------- %
 % Inferences rules             %
 % ---------------------------- %
 % Infer pit or wumpus if sensed an danger in two adjacents blocks.
 is_dangerous(X, Y) :- has_pit(X, Y); has_wumpus(X, Y).
+
+stench_at(-1, -1).
+breeze_at(-1, -1).
 
 has_pit(X, Y) :-
   E is X + 1, N is Y + 1, breeze_at(E, Y), breeze_at(X, N), !;
@@ -227,54 +223,26 @@ has_wumpus(X, Y) :-
   W is X - 1, S is Y - 1, stench_at(W, Y), stench_at(X, S), !;
   S is Y - 1, E is X + 1, stench_at(X, S), stench_at(E, Y), !.
 
-% ---------------------------- %
-% Define heuristics            %
-% ---------------------------- %
-heuristic(avoid_pit) :-
-  write('Avoiding pit. '),
-  hunter(X, Y, _), assertz( breeze_at(X, Y) ).
-
-heuristic(avoid_wumpus) :-
-  write('Avoiding wumpus. '),
-  hunter(X, Y, _), assertz( stench_at(X, Y) ).
-
-heuristic(get_back) :- write('Get back. ').
-
-% perceptions([Stench, Breeze, Glitter, Bump, Scream])
-take_action([_, _, _, _, _], exit)   :-
-  hunter(1, 1, _), has_gold(yes), !.
-
-take_action([_, _, _, _, _],  A) :-
-  hunter(X, Y, _), has_gold(G), X \== 1, Y \== 1, G == gold,
-  heuristic(get_back),
-  A = forward,
-  !.
-
-take_action([_, _, yes, _, _], grab) :- !.
-
-take_action([_, _, _, yes, _], A) :-
-  A = turnleft,
-  !.
-
-take_action([_, yes, _, _, _], A) :-
-  heuristic(avoid_pit),
-  A = [turnleft, turnleft, forward],
-  !.
-
-take_action([_, _, _, _, _], forward)   :- !.
+% Score
+score(S) :- findall(A, actions(A), As), length(As, S).
 
 % Print
 print_result :-
-  format('Score: ~d.', [0]).
+  score(S),
+  format('~n~tResult~t~40|~n'),
+  format('Score: ~`.t ~d~40|', [S]), nl,
+  has_gold(yes) ->
+    format('Outcome: ~`.t ~p~40|', [win]), nl;
+    format('Outcome: ~`.t ~p~40|', [loose]), nl.
 
 % Run the game
 run :- runloop(0).
 
-runloop(100) :- !.
+runloop(100) :- action(exit), !.
 runloop(T) :-
   hunter(X, Y, D), perceptions(P),
   format('~d: At ~dx~d facing ~p, senses ~p. ', [T, X, Y, D, P]),
-  take_action(P, A),
+  heuristic(P, A),
   format('I\'m doing ~p.~n', [A]),
   action(A),
   % Iterate
@@ -282,5 +250,6 @@ runloop(T) :-
     Ti is T + 1,
     runloop(Ti)
   );
-  write('You have deceased'),
+  write('- You have deceased'), nl,
+  action(exit),
   !.
