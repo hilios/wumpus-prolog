@@ -1,6 +1,7 @@
-stench_at(-1, -1).
-breeze_at(-1, -1).
-
+:- dynamic([
+  stench_at/2,
+  breeze_at/2
+]).
 % ---------------------------- %
 % Inferences rules             %
 % ---------------------------- %
@@ -19,28 +20,29 @@ has_wumpus(X, Y) :-
   W is X - 1, S is Y - 1, stench_at(W, Y), stench_at(X, S), !;
   S is Y - 1, E is X + 1, stench_at(X, S), stench_at(E, Y), !.
 
-% Knowledge database, mark where I found stench and breeze
-mark(breeze) :-
-  hunter(X, Y, _), assertz( breeze_at(X, Y) ),
-
-mark(stench) :-
-  hunter(X, Y, _), assertz( stench_at(X, Y) ),
+% Knowledge database, add knowledge where I found stench and breeze
+add_knowledge(breeze) :- hunter(X, Y, _), assertz(breeze_at(X, Y)).
+add_knowledge(stench) :- hunter(X, Y, _), assertz(stench_at(X, Y)).
 
 % ---------------------------- %
 % Define heuristics            %
 % ---------------------------- %
 
-% perceptions([Stench, Breeze, Glitter, Bump, Scream])
+% [Stench, Breeze, Glitter, Bump, Scream]
 heuristic([_, _, _, _, _], exit) :- hunter(1, 1, _), has_gold(yes), !.
 
 heuristic([_, _, yes, _, _], grab) :- !.
 
-heuristic([_, _, _, yes, _], grab) :- .
-
-heuristic([yes, _, _, _, _], noop) :- % I don't know were Wumpus is
-  mark(stench),
+heuristic([yes, _, _, _, _], random) :- % I don't know were Wumpus is
+  add_knowledge(stench),
+  neighbors(N),
+  format('Neighbors ~p', [N]), nl,
   !.
 
-heuristic([_, yes, _, _, _], noop) :-
-  mark(breeze),
+heuristic([_, yes, _, _, _], random) :-
+  add_knowledge(breeze),
+  neighbors(N),
+  format('Neighbors ~p', [N]), nl,
   !.
+
+heuristic(_, random).

@@ -22,6 +22,10 @@
 % Defines the world NxM matrix.
 world(4, 4).
 
+% Initial player position
+hunter(1, 1, east).
+visited(1, 1).
+
 %     +---+---+---+---+
 %   4 |   |   |   | P |
 %     +---+---+---+---+
@@ -33,12 +37,11 @@ world(4, 4).
 %     +---+---+---+---+
 %       1   2   3   4
 % Database.
-% hunter(1, 1, east).
-% wumpus(1, 3).
-% pit(3, 1).
-% pit(3, 3).
-% pit(4, 4).
-% gold(2, 3).
+wumpus(1, 3).
+pit(3, 1).
+pit(3, 3).
+pit(4, 4).
+gold(2, 3).
 
 % Test database
 %     +---+---+---+---+
@@ -51,10 +54,7 @@ world(4, 4).
 %   1 | H |   |   |   |
 %     +---+---+---+---+
 %       1   2   3   4
-hunter(1, 1, east).
-gold(4, 4).
-
-visited(1, 1).
+% gold(4, 4).
 
 % ---------------------------- %
 % Environment predicates       %
@@ -109,16 +109,16 @@ is_player(alive).
 is_wumpus(alive) :- wumpus(X, Y), shooted(X, Y), !.
 is_wumpus(dead).
 
-% Returns the current percetions
-perceptions([Stench, Breeze, Glitter, Bump, Scream]) :-
-  has_stench(Stench), has_breeze(Breeze), has_glitter(Glitter),
-  has_bump(Bump), has_scream(Scream), !.
-
 % Check if position is into map bounds.
 in_bounds(X, Y) :-
   world(W, H),
   X > 0, X =< W,
   Y > 0, Y =< H.
+
+% Returns the current percetions
+perceptions([Stench, Breeze, Glitter, Bump, Scream]) :-
+  has_stench(Stench), has_breeze(Breeze), has_glitter(Glitter),
+  has_bump(Bump), has_scream(Scream), !.
 
 % Moves the Player to a new position.
 move(X, Y) :-
@@ -140,11 +140,11 @@ shoot(X, Y) :-
   assertz(shooted(X, Y)).
 
 % Get all adjacent blocks
-neighbors(L) :- findall(N, neighbor(N), L).
-neighbor(B) :- hunter(X, Y, _), E is X+1, in_bounds(E, Y), B = [E, Y].
-neighbor(B) :- hunter(X, Y, _), N is Y+1, in_bounds(X, N), B = [X, N].
-neighbor(B) :- hunter(X, Y, _), W is X-1, in_bounds(W, Y), B = [W, Y].
-neighbor(B) :- hunter(X, Y, _), S is Y-1, in_bounds(X, S), B = [X, S].
+neighbors(N) :- findall(A, adjacents(A), N).
+adjacents(B) :- hunter(X, Y, _), E is X+1, in_bounds(E, Y), B = [E, Y].
+adjacents(B) :- hunter(X, Y, _), N is Y+1, in_bounds(X, N), B = [X, N].
+adjacents(B) :- hunter(X, Y, _), W is X-1, in_bounds(W, Y), B = [W, Y].
+adjacents(B) :- hunter(X, Y, _), S is Y-1, in_bounds(X, S), B = [X, S].
 
 % Player's actions
 action(exit) :- write('- Bye, bye!'), nl, print_result, nl, halt.
@@ -193,6 +193,6 @@ runloop(T) :-
     Ti is T + 1,
     runloop(Ti)
   );
-  write('- You have deceased'), nl,
+  write('You have deceased.'), nl,
   action(exit),
   !.
