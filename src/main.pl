@@ -1,5 +1,5 @@
 :- abolish(hunter/3).
-:- abolish(wumpus/3).
+:- abolish(wumpus/2).
 :- abolish(pit/2).
 :- abolish(gold/2).
 :- abolish(grab/2).
@@ -9,7 +9,7 @@
 
 :- dynamic([
   hunter/3,
-  wumpus/3,
+  wumpus/2,
   pit/2,
   gold/2,
   grab/2,
@@ -32,7 +32,7 @@ world(4, 4).
 %       1   2   3   4
 % Database.
 % hunter(1, 1, east).
-% wumpus(1, 3, alive).
+% wumpus(1, 3).
 % pit(3, 1).
 % pit(3, 3).
 % pit(4, 4).
@@ -60,7 +60,7 @@ visited(1, 1).
 has_gold(yes) :- grab(X, Y), gold(X, Y), !.
 has_gold(no).
 
-has_arrows(yes) :- false.
+has_arrows(yes) :- shoot_at(_, _), !.
 has_arrows(no).
 
 % Perceptions
@@ -79,10 +79,10 @@ has_breeze(no).
 
 % Senses stench if adjacent block has the wumpus.
 has_stench(yes) :-
-  hunter(X, Y, _), N is Y + 1, wumpus(X, N, _), !;
-  hunter(X, Y, _), S is Y - 1, wumpus(X, S, _), !;
-  hunter(X, Y, _), E is X + 1, wumpus(E, Y, _), !;
-  hunter(X, Y, _), W is X - 1, wumpus(W, Y, _), !.
+  hunter(X, Y, _), N is Y + 1, wumpus(X, N), !;
+  hunter(X, Y, _), S is Y - 1, wumpus(X, S), !;
+  hunter(X, Y, _), E is X + 1, wumpus(E, Y), !;
+  hunter(X, Y, _), W is X - 1, wumpus(W, Y), !.
 has_stench(no).
 
 % Senses bump if is facing a wall
@@ -94,25 +94,23 @@ has_bump(yes) :-
 has_bump(no).
 
 % Senses screm if wumpus have died
-has_scream(yes) :- wumpus(_, _, S), S == dead, !.
+has_scream(yes) :- is_wumpus(alive), !.
 has_scream(no).
 
-% Check if player has died.
-is_dead :-
-  hunter(X, Y, _), wumpus(X, Y, _), !;
-  hunter(X, Y, _), pit(X, Y), !.
-is_alive :- \+ is_dead.
+% Check player's condition
+is_player(dead) :-
+  hunter(X, Y, _), wumpus(X, Y), !;
+  hunter(X, Y, _), pit(X, Y),    !.
+is_player(alive).
+
+% Check Wumpus condition
+is_wumpus(alive) :- wumpus(X, Y), shoot_at(X, Y), !.
+is_wumpus(dead).
 
 % Returns the current percetions
 perceptions([Stench, Breeze, Glitter, Bump, Scream]) :-
   has_stench(Stench), has_breeze(Breeze), has_glitter(Glitter),
   has_bump(Bump), has_scream(Scream), !.
-
-% Returns the angle given its direction.
-direction(east,  0).
-direction(north, 90).
-direction(west,  180).
-direction(south, 270).
 
 % Check if position is into map bounds.
 in_bounds(X, Y) :-
@@ -125,10 +123,10 @@ move(X, Y) :-
   assertz(actions(move)),
   in_bounds(X, Y),
   format("- Moving to ~dx~d~n", [X,Y]),
-  assertz( visited(X, Y) ),
+  assertz(visited(X, Y)),
   hunter(_, _, D),
-  retractall( hunter(_, _, D) ), % Reset the hunter pos then reassign.
-  asserta( hunter(X, Y, D) ),
+  retractall(hunter(_, _, D)), % Reset the hunter pos then reassign.
+  asserta(hunter(X, Y, D)),
   !.
 move(X, Y) :- format('- Cannot move to ~dx~d~n', [X, Y]).
 
@@ -136,17 +134,10 @@ move(X, Y) :- format('- Cannot move to ~dx~d~n', [X, Y]).
 shoot(X, Y) :-
   assertz(actions(shoot)),
   has_arrows(yes),
-  wumpus(X, Y, alive),
-  retractall( wumpus(X, Y, alive) ),
-  asserta( wumpus(X, Y, dead) ),
+  assertz(shoot_at(X, Y)),
+  wumpus(X, Y),
   !.
 shoot(_, _) :- write('I don not have arrows anymore.').
-
-% Get the position ahead of the player
-next(X, Y) :- hunter(Xi, Yi, east),  X is Xi+1, Y is Yi, !.
-next(X, Y) :- hunter(Xi, Yi, north), X is Xi, Y is Yi+1, !.
-next(X, Y) :- hunter(Xi, Yi, west),  X is Xi-1, Y is Yi, !.
-next(X, Y) :- hunter(Xi, Yi, south), X is Xi, Y is Yi-1, !.
 
 % Get all adjacent blocks
 neighbors(L) :- findall(N, neighbor(N), L).
@@ -156,58 +147,24 @@ neighbor(B) :- hunter(X, Y, _), W is X-1, in_bounds(W, Y), B = [W, Y].
 neighbor(B) :- hunter(X, Y, _), S is Y-1, in_bounds(X, S), B = [X, S].
 
 % Player's actions
-action(grab) :-
-  hunter(X, Y, _), assertz( grab(X, Y) ), \+ gold(X, Y),
-  assertz(actions(grab)),
-  write('- Nothing to grab'), nl.
+action(exit) :- write('- Bye, bye!'), nl, print_result, nl, halt.
+
+action([move,  X, Y]) :- move(X, Y).
+action([shoot, X, Y]) :- shoot(X, Y).
 
 action(grab) :-
-  hunter(X, Y, _), assertz( grab(X, Y) ), has_gold(no), gold(X, Y),
   assertz(actions(grab)),
-  write('- Found gold!'), nl.
+  hunter(X, Y, _), assertz( grab(X, Y) ),
+  (gold(X, Y), has_gold(no)) ->
+    write('- Found gold!'), nl;
+    write('- Nothing to grab'), nl.
 
-action(turnleft) :-
-  assertz(actions(turn)),
-  write('- Turn left'), nl, assertz( actions(turn) ),
-  hunter(X, Y, CD),
-  direction(CD, A),
-  Left is abs(A + 90) mod 360,
-  direction(D, Left),
-  retractall( hunter(_, _, _) ),
-  asserta( hunter(X, Y, D) ).
-
-action(turnright) :-
-  assertz(actions(turn)),
-  write('- Turn right'), nl, assertz( actions(turn) ),
-  hunter(X, Y, CD),
-  direction(CD, A),
-  Right is abs(A - 90) mod 360,
-  direction(D, Right),
-  retractall( hunter(_, _, _) ),
-  asserta( hunter(X, Y, D) ).
-
-action(forward) :- next(X, Y), move(X, Y), !.
-action(forward) :- next(X, Y), move(X, Y), !.
-action(forward) :- next(X, Y), move(X, Y), !.
-action(forward) :- next(X, Y), move(X, Y), !.
-
-action(shoot) :- next(X, Y), shoot(X, Y), !.
-action(shoot) :- next(X, Y), shoot(X, Y), !.
-action(shoot) :- next(X, Y), shoot(X, Y), !.
-action(shoot) :- next(X, Y), shoot(X, Y), !.
-
-% Executes a naive random move
+% A naive random move
 action(random) :-
   neighbors(N), length(N, L), random_between(1, L, R), nth1(R, N, [X, Y]),
   move(X, Y).
 
-action(exit) :- write('- Bye, bye!'), nl, print_result, nl, halt.
-
-action(noop) :- !.
-
-% Apply a list of actions
-action([]).
-action([A|Actions]) :- action(A), action(Actions).
+action(noop).
 
 % Score
 score(S) :- findall(A, actions(A), As), length(As, S).
@@ -232,7 +189,7 @@ runloop(T) :-
   format('I\'m doing ~p.~n', [A]),
   action(A),
   % Iterate
-  is_alive -> (
+  is_player(alive) -> (
     Ti is T + 1,
     runloop(Ti)
   );
