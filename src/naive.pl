@@ -1,4 +1,9 @@
-% Executes a naive random move
-heuristic([_, _, _, _, _], noop) :-
-  neighbors(N), length(N, L), random_between(1, L, R), nth1(R, N, [X, Y]),
-  move(X, Y).
+% ---------------------------- %
+% Define heuristics            %
+% ---------------------------- %
+
+% Grab the gold if sees it shining
+heuristic([_, _, yes, _, _], grab) :- !.
+
+% Apply a random move
+heuristic([_, _, _, _, _], random) :- !.

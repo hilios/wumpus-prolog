@@ -148,7 +148,7 @@ next(X, Y) :- hunter(Xi, Yi, north), X is Xi, Y is Yi+1, !.
 next(X, Y) :- hunter(Xi, Yi, west),  X is Xi-1, Y is Yi, !.
 next(X, Y) :- hunter(Xi, Yi, south), X is Xi, Y is Yi-1, !.
 
-% Get all neighbors
+% Get all adjacent blocks
 neighbors(L) :- findall(N, neighbor(N), L).
 neighbor(B) :- hunter(X, Y, _), E is X+1, in_bounds(E, Y), B = [E, Y].
 neighbor(B) :- hunter(X, Y, _), N is Y+1, in_bounds(X, N), B = [X, N].
@@ -196,7 +196,14 @@ action(shoot) :- next(X, Y), shoot(X, Y), !.
 action(shoot) :- next(X, Y), shoot(X, Y), !.
 action(shoot) :- next(X, Y), shoot(X, Y), !.
 
+% Executes a naive random move
+action(random) :-
+  neighbors(N), length(N, L), random_between(1, L, R), nth1(R, N, [X, Y]),
+  move(X, Y).
+
 action(exit) :- write('- Bye, bye!'), nl, print_result, nl, halt.
+
+action(noop) :- !.
 
 % Apply a list of actions
 action([]).
@@ -231,14 +238,14 @@ print_result :-
   score(S),
   format('~n~tResult~t~40|~n'),
   format('Score: ~`.t ~d~40|', [S]), nl,
-  has_gold(yes) ->
+  (has_gold(yes), hunter(1, 1, _)) ->
     format('Outcome: ~`.t ~p~40|', [win]), nl;
     format('Outcome: ~`.t ~p~40|', [loose]), nl.
 
 % Run the game
 run :- runloop(0).
 
-runloop(100) :- action(exit), !.
+runloop(100) :- write('100: Reached max allowed moves.'), nl, action(exit), !.
 runloop(T) :-
   hunter(X, Y, D), perceptions(P),
   format('~d: At ~dx~d facing ~p, senses ~p. ', [T, X, Y, D, P]),
