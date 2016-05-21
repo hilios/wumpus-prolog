@@ -209,27 +209,6 @@ action(noop) :- !.
 action([]).
 action([A|Actions]) :- action(A), action(Actions).
 
-% ---------------------------- %
-% Inferences rules             %
-% ---------------------------- %
-% Infer pit or wumpus if sensed an danger in two adjacents blocks.
-is_dangerous(X, Y) :- has_pit(X, Y); has_wumpus(X, Y).
-
-stench_at(-1, -1).
-breeze_at(-1, -1).
-
-has_pit(X, Y) :-
-  E is X + 1, N is Y + 1, breeze_at(E, Y), breeze_at(X, N), !;
-  N is Y + 1, W is X - 1, breeze_at(X, N), breeze_at(W, Y), !;
-  W is X - 1, S is Y - 1, breeze_at(W, Y), breeze_at(X, S), !;
-  S is Y - 1, E is X + 1, breeze_at(X, S), breeze_at(E, Y), !.
-
-has_wumpus(X, Y) :-
-  E is X + 1, N is Y + 1, stench_at(E, Y), stench_at(X, N), !;
-  N is Y + 1, W is X - 1, stench_at(X, N), stench_at(W, Y), !;
-  W is X - 1, S is Y - 1, stench_at(W, Y), stench_at(X, S), !;
-  S is Y - 1, E is X + 1, stench_at(X, S), stench_at(E, Y), !.
-
 % Score
 score(S) :- findall(A, actions(A), As), length(As, S).
 
