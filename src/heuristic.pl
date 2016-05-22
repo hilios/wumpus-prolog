@@ -15,7 +15,9 @@ has_pit(X, Y, yes) :-
   E is X + 1, N is Y + 1, breeze_at(E, Y), breeze_at(X, N), !;
   N is Y + 1, W is X - 1, breeze_at(X, N), breeze_at(W, Y), !;
   W is X - 1, S is Y - 1, breeze_at(W, Y), breeze_at(X, S), !;
-  S is Y - 1, E is X + 1, breeze_at(X, S), breeze_at(E, Y), !.
+  S is Y - 1, E is X + 1, breeze_at(X, S), breeze_at(E, Y), !;
+  N is Y + 1, S is Y - 1, breeze_at(X, N), breeze_at(X, S), !;
+  E is X + 1, W is Y + 1, breeze_at(E, Y), breeze_at(W, Y), !.
 has_pit(X, Y, maybe) :-
   E is X + 1, breeze_at(E, Y), !;
   N is Y + 1, breeze_at(X, N), !;
@@ -81,7 +83,8 @@ safest_path(X, Y) :-
   findall(C, neighbors_cost(C), L), min_list(L, Min),
   % Returns the position with less cost hence the safest
   index_of(L, Min, I),
-  neighbors(N), nth0(I, N, [X, Y]).
+  neighbors(N), nth0(I, N, [X, Y]),
+  format('~n> Costs ~p for ~p selected ~p~n', [L, N, Min]).
 
 neighbors_cost(C) :- neighbors(X, Y), sum_cost(X, Y, C).
 
@@ -91,9 +94,12 @@ sum_cost(X, Y, C) :- findall(Ci, cost(X, Y, Ci), Cs), sum_list(Cs, C).
 cost(X, Y, C) :- hunter(_, _, Di), direction(X, Y, D), Di \== D, C is 1.
 cost(X, Y, C) :- visited(X, Y), has_gold(yes),        C is -5.
 cost(X, Y, C) :- visited(X, Y), has_gold(no),         C is +5.
-cost(X, Y, C) :- \+visited(X, Y), feels_danger(yes),  C is 10.
 cost(X, Y, C) :- has_pit(X, Y, yes),    C is 100.
 cost(X, Y, C) :- has_wumpus(X, Y, yes), C is 100.
+cost(X, Y, C) :- \+visited(X, Y), feels_danger(yes), has_pit(X, Y, maybe),
+  C is 10.
+cost(X, Y, C) :- \+visited(X, Y), feels_danger(yes), has_wumpus(X, Y, maybe),
+  C is 10.
 
 % Get the first occurence of certain value
 index_of([H|_], H, 0):- !.
