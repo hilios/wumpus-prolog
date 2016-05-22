@@ -107,9 +107,8 @@ has_scream(yes) :- is_wumpus(alive), !.
 has_scream(no).
 
 % Check player's condition
-is_player(dead) :-
-  hunter(X, Y, _), wumpus(X, Y), !;
-  hunter(X, Y, _), pit(X, Y),    !.
+is_player(dead) :- hunter(X, Y, _), wumpus(X, Y), !.
+is_player(dead) :- hunter(X, Y, _), pit(X, Y),    !.
 is_player(alive).
 
 % Check Wumpus condition
@@ -214,10 +213,8 @@ runloop(T) :-
   format('I\'m doing ~p.~n', [A]),
   action(A),
   % Iterate
-  is_player(alive) -> (
-    Ti is T + 1,
-    runloop(Ti)
-  );
-  write('You have deceased.'), nl,
-  action(exit),
-  !.
+  is_player(dead) -> (
+    write('You have deceased.'), nl,
+    action(exit), !);
+  Ti is T + 1,
+  runloop(Ti).
