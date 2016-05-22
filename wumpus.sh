@@ -1,2 +1,2 @@
 #!/bin/bash
-swipl -f $1 -s src/main.pl -g "run."
+time swipl -f $1 -s src/main.pl -g "run."
