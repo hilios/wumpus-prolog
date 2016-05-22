@@ -26,6 +26,13 @@ world(4, 4).
 hunter(1, 1, east).
 visited(1, 1).
 
+% Random world
+% random_between(2, 4, X), random_between(2, 4, Y), gold(X, Y).
+% random_between(2, 4, X), random_between(2, 4, Y), wumpus(X, Y).
+% random_between(2, 4, X), random_between(2, 4, Y), pit(X, Y).
+% random_between(2, 4, X), random_between(2, 4, Y), pit(X, Y).
+% random_between(2, 4, X), random_between(2, 4, Y), pit(X, Y).
+
 %     +---+---+---+---+
 %   4 |   |   |   | P |
 %     +---+---+---+---+
@@ -36,14 +43,14 @@ visited(1, 1).
 %   1 | H |   | P |   |
 %     +---+---+---+---+
 %       1   2   3   4
-% Database.
+% Test world
 wumpus(1, 3).
-pit(3, 1).
+% pit(3, 1).
 pit(3, 3).
 pit(4, 4).
 gold(2, 3).
 
-% Test database
+% Test world
 %     +---+---+---+---+
 %   4 |   |   |   | G |
 %     +---+---+---+---+
@@ -106,8 +113,8 @@ is_player(dead) :-
 is_player(alive).
 
 % Check Wumpus condition
-is_wumpus(alive) :- wumpus(X, Y), shooted(X, Y), !.
-is_wumpus(dead).
+is_wumpus(dead) :- shooted(X, Y), wumpus(X, Y), !.
+is_wumpus(alive).
 
 % Check if position is into map bounds.
 in_bounds(X, Y) :-
@@ -186,10 +193,12 @@ steps(S) :- findall(A, actions(A), As), length(As, S).
 
 % Print
 print_result :-
-  score(S), steps(T),
+  score(S), steps(T), is_player(P), is_wumpus(W),
   format('~n~tResult~t~40|~n'),
   format('Steps: ~`.t ~d~40|', [T]), nl,
   format('Score: ~`.t ~d~40|', [S]), nl,
+  format('Player: ~`.t ~p~40|', [P]), nl,
+  format('Wumpus: ~`.t ~p~40|', [W]), nl,
   (has_gold(yes), hunter(1, 1, _)) ->
     format('Outcome: ~`.t ~p~40|', [win]), nl;
     format('Outcome: ~`.t ~p~40|', [loose]), nl.
