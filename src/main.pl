@@ -27,11 +27,11 @@ hunter(1, 1, east).
 visited(1, 1).
 
 % Random world
-% random_between(2, 4, X), random_between(2, 4, Y), gold(X, Y).
-% random_between(2, 4, X), random_between(2, 4, Y), wumpus(X, Y).
-% random_between(2, 4, X), random_between(2, 4, Y), pit(X, Y).
-% random_between(2, 4, X), random_between(2, 4, Y), pit(X, Y).
-% random_between(2, 4, X), random_between(2, 4, Y), pit(X, Y).
+% :- random_between(2, 4, X), random_between(2, 4, Y), assertz(gold(X, Y)).
+% :- random_between(2, 4, X), random_between(2, 4, Y), assertz(wumpus(X, Y)).
+% :- random_between(2, 4, X), random_between(2, 4, Y), assertz(pit(X, Y)).
+% :- random_between(2, 4, X), random_between(2, 4, Y), assertz(pit(X, Y)).
+% :- random_between(2, 4, X), random_between(2, 4, Y), assertz(pit(X, Y)).
 
 %     +---+---+---+---+
 %   4 |   |   |   | P |
@@ -45,7 +45,7 @@ visited(1, 1).
 %       1   2   3   4
 % Test world
 wumpus(1, 3).
-% pit(3, 1).
+pit(4, 1).
 pit(3, 3).
 pit(4, 4).
 gold(2, 3).
@@ -162,7 +162,7 @@ neighbors(X, Y) :- hunter(Xi, Yi, _), W is Xi-1, in_bounds(W, Yi), X is W,  Y is
 neighbors(X, Y) :- hunter(Xi, Yi, _), S is Yi-1, in_bounds(Xi, S), X is Xi, Y is S.
 
 % Player's actions
-action(exit) :- write('Bye, bye!'), nl, print_result, nl, halt.
+action(exit) :- write('Bye, bye!'), nl, print_result, nl, print_world, nl, halt.
 
 action([move,  X, Y]) :- move(X, Y).
 action([shoot, X, Y]) :- shoot(X, Y).
@@ -192,15 +192,22 @@ steps(S) :- findall(A, actions(A), As), length(As, S).
 
 % Print
 print_result :-
-  score(S), steps(T), is_player(P), is_wumpus(W),
   format('~n~tResult~t~40|~n'),
+  score(S), steps(T),
   format('Steps: ~`.t ~d~40|', [T]), nl,
   format('Score: ~`.t ~d~40|', [S]), nl,
-  format('Player: ~`.t ~p~40|', [P]), nl,
-  format('Wumpus: ~`.t ~p~40|', [W]), nl,
   (has_gold(yes), hunter(1, 1, _)) ->
     format('Outcome: ~`.t ~p~40|', [win]), nl;
     format('Outcome: ~`.t ~p~40|', [loose]), nl.
+
+print_world :-
+  is_player(P), hunter(Hx, Hy, _),
+  format('~n~tWorld~t~40|~n'),
+  format('Player: ~`.t ~p at ~dx~d~40|', [P, Hx, Hy]), nl,
+  is_wumpus(W), wumpus(Wx, Wy),
+  format('Wumpus: ~`.t ~p at ~dx~d~40|', [W, Wx, Wy]), nl,
+  findall([Px, Py], pit(Px, Py), Ps),
+  format('Pit: ~`.t ~p~40|', [Ps]), nl.
 
 % Run the game
 run :- runloop(0).
