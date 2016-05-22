@@ -103,7 +103,7 @@ has_bump(yes) :-
 has_bump(no).
 
 % Senses screm if wumpus have died
-has_scream(yes) :- is_wumpus(alive), !.
+has_scream(yes) :- is_wumpus(dead), !.
 has_scream(no).
 
 % Check player's condition
