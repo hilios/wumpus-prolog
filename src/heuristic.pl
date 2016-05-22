@@ -63,7 +63,7 @@ heuristic([_, yes, _, _, _], A) :- % I don't know were Pit is
   add_knowledge(breeze),
   neighbors(N),
   format('Neighbors ~p. ', [N]),
-  safest_path(X, Y),
+  safest_path(N, [X, Y]),
   A = [move, X, Y],
   !.
 
@@ -73,21 +73,21 @@ heuristic(_, random).
 % Helpers                      %
 % ---------------------------- %
 safest_path(X, Y) :-
-  neighbors(N), length(N, L), random_between(1, L, R), nth1(R, N, [X, Y]).
+  % Calculat all neighbors cost and select the minimun
+  findall(C, neighbors_cost(C), L), min_list(L, Min),
+  % Returns the position with less cost hence the safest
+  index_of(L, Min, I),
+  neighbors(N), nth0(I, N, [X, Y]).
 
-cost(X, Y, C) :- \+ visited(X, Y), has_gold(yes), C is -5.
-cost(X, Y, C) :- visited(X, Y),         C is 5.
-cost(_, _, C) :- is_dangerous(yes),     C is 10.
-cost(X, Y, C) :- has_pit(X, Y, yes),    C is 100.
-cost(X, Y, C) :- has_wumpus(X, Y, yes), C is 100.
+neighbors_cost(C) :- neighbors(X, Y), cost(X, Y, C).
 
+cost(X, Y, C) :- \+visited(X, Y), has_gold(yes), C is -5, !.
+cost(X, Y, C) :- visited(X, Y),         C is 5,   !.
+cost(X, Y, C) :- has_pit(X, Y, yes),    C is 100, !.
+cost(X, Y, C) :- has_wumpus(X, Y, yes), C is 100, !.
+cost(_, _, C) :- is_dangerous(yes),     C is 10,  !.
+cost(_, _, C) :- C is 0.
 
-% min_cost(X, Y, C).
-% min_cost([H|T], C) :- cost(H).
-%
-% min([X],X).
-% min([X|Xs],X) :- min(Xs, Y), X =< Y.
-% min([X|Xs],N) :- min(Xs, N), N <  X.
-%
-% calc_cost([]).
-% calc_cost([H|T]) :- cost(H), calc_cost(T).
+% Get the first occurence of certain value
+index_of([H|_], H, 0):- !.
+index_of([_|T], H, Index):- index_of(T, H, OldIndex), !, Index is OldIndex + 1.
