@@ -68,8 +68,8 @@ heuristic(_, [move, X, Y]) :-
   !.
 
 % Exit if have found the same place ten times
-% heuristic(_, exit) :- hunter(X, Y, _), findall(1, visited(X, Y), V),
-%   length(V, L), L > 30, write('I Give up! ').
+heuristic(_, exit) :- hunter(X, Y, _), findall(1, visited(X, Y), V),
+  length(V, L), L > 200, write('I Give up! ').
 
 heuristic(_, [move, X, Y]) :-
   safest_path(X, Y),

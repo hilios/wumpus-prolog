@@ -1,2 +1,2 @@
 #!/bin/bash
-time swipl -f $1 -s src/main.pl -g "run."
+swipl -f $1 -g src/world.pl -s src/main.pl -g "run(random)."

@@ -175,7 +175,7 @@ print_world :-
   format('Pit: ~`.t ~p~40|', [Ps]), nl.
 
 % Run the game
-run_random :-
+run(random) :-
   random_between(2, 5, X1), random_between(2, 5, Y1), assertz(gold(X1, Y1)),
   random_between(2, 5, X2), random_between(2, 5, Y2), assertz(wumpus(X2, Y2)),
   random_between(2, 5, X3), random_between(2, 5, Y3), assertz(pit(X3, Y3)),
