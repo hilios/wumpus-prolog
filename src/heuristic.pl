@@ -51,23 +51,28 @@ heuristic([_, _, _, _, _], exit) :- hunter(1, 1, _), has_gold(yes), !.
 
 heuristic([_, _, yes, _, _], grab) :- !.
 
-heuristic([yes, _, _, _, _], A) :- % I don't know were Wumpus is
-  add_knowledge(stench),
-  neighbors(N),
-  format('Neighbors ~p. ', [N]),
+heuristic([yes, _, _, _, _], [move, X, Y]) :- % I don't know were Wumpus is
+  write('The Wumpus is near. '),
+  add_knowledge(stench), safest_path(X, Y),
+  !.
+
+heuristic([_, yes, _, _, _], [move, X, Y]) :- % I don't know were Pit is
+  write('There is a pit somewhere. '),
+  add_knowledge(breeze), safest_path(X, Y),
+  !.
+
+% Get back to the beginning
+heuristic(_, [move, X, Y]) :-
+  has_gold(yes), write('Get back. '), safest_path(X, Y),
+  !.
+
+% Exit if have found the same place ten times
+heuristic(_, exit) :- hunter(X, Y, _), findall(1, visited(X, Y), V),
+  length(V, L), L > 10, write('I Give up! ').
+
+heuristic(_, [move, X, Y]) :-
   safest_path(X, Y),
-  A = [move, X, Y],
   !.
-
-heuristic([_, yes, _, _, _], A) :- % I don't know were Pit is
-  add_knowledge(breeze),
-  neighbors(N),
-  format('Neighbors ~p. ', [N]),
-  safest_path(N, [X, Y]),
-  A = [move, X, Y],
-  !.
-
-heuristic(_, random).
 
 % ---------------------------- %
 % Helpers                      %
@@ -81,6 +86,7 @@ safest_path(X, Y) :-
 
 neighbors_cost(C) :- neighbors(X, Y), cost(X, Y, C).
 
+% Cost predicate
 cost(X, Y, C) :- \+visited(X, Y), has_gold(yes), C is -5, !.
 cost(X, Y, C) :- visited(X, Y),         C is 5,   !.
 cost(X, Y, C) :- has_pit(X, Y, yes),    C is 100, !.
