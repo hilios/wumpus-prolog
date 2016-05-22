@@ -13,11 +13,11 @@
 %     +---+---+---+---+
 %       1   2   3   4
 % Test world
-% wumpus(1, 3).
-% pit(4, 1).
-% pit(3, 3).
-% pit(4, 4).
-% gold(2, 3).
+gold(2, 3).
+wumpus(1, 3).
+pit(4, 1).
+pit(3, 3).
+pit(4, 4).
 
 % Test world
 %     +---+---+---+---+
@@ -31,10 +31,3 @@
 %     +---+---+---+---+
 %       1   2   3   4
 % gold(4, 4).
-
-% Random world
-:- random_between(2, 5, X), random_between(2, 5, Y), assertz(gold(X, Y)).
-:- random_between(2, 5, X), random_between(2, 5, Y), assertz(wumpus(X, Y)).
-:- random_between(2, 5, X), random_between(2, 5, Y), assertz(pit(X, Y)).
-:- random_between(2, 5, X), random_between(2, 5, Y), assertz(pit(X, Y)).
-:- random_between(2, 5, X), random_between(2, 5, Y), assertz(pit(X, Y)).

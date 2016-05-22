@@ -181,7 +181,15 @@ run(random) :-
   random_between(2, 5, X3), random_between(2, 5, Y3), assertz(pit(X3, Y3)),
   random_between(2, 5, X4), random_between(2, 5, Y4), assertz(pit(X4, Y4)),
   random_between(2, 5, X5), random_between(2, 5, Y5), assertz(pit(X5, Y5)),
-  runloop(0).
+  run.
+
+run([Gx, Gy], [Wx], [Wy], [P1x, P1y], [P2x, P2y], [P3x, P3y]) :-
+  assertz(gold(Gx, Gy)),
+  assertz(wumpus(Wx, Wy)),
+  assertz(pit(P1x, P1y)),
+  assertz(pit(P2x, P2y)),
+  assertz(pit(P3x, P3y)),
+  run.
 
 run :- runloop(0).
 
