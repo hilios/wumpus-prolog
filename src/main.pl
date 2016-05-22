@@ -26,43 +26,6 @@ world(4, 4).
 hunter(1, 1, east).
 visited(1, 1).
 
-% Random world
-% :- random_between(2, 4, X), random_between(2, 4, Y), assertz(gold(X, Y)).
-% :- random_between(2, 4, X), random_between(2, 4, Y), assertz(wumpus(X, Y)).
-% :- random_between(2, 4, X), random_between(2, 4, Y), assertz(pit(X, Y)).
-% :- random_between(2, 4, X), random_between(2, 4, Y), assertz(pit(X, Y)).
-% :- random_between(2, 4, X), random_between(2, 4, Y), assertz(pit(X, Y)).
-
-%     +---+---+---+---+
-%   4 |   |   |   | P |
-%     +---+---+---+---+
-%   3 | W | G | P |   |
-%     +---+---+---+---+
-%   2 |   |   |   |   |
-%     +---+---+---+---+
-%   1 | H |   | P |   |
-%     +---+---+---+---+
-%       1   2   3   4
-% Test world
-wumpus(1, 3).
-pit(4, 1).
-pit(3, 3).
-pit(4, 4).
-gold(2, 3).
-
-% Test world
-%     +---+---+---+---+
-%   4 |   |   |   | G |
-%     +---+---+---+---+
-%   3 |   |   |   |   |
-%     +---+---+---+---+
-%   2 |   |   |   |   |
-%     +---+---+---+---+
-%   1 | H |   |   |   |
-%     +---+---+---+---+
-%       1   2   3   4
-% gold(4, 4).
-
 % ---------------------------- %
 % Environment predicates       %
 % ---------------------------- %
@@ -206,13 +169,23 @@ print_world :-
   format('Player: ~`.t ~p at ~dx~d~40|', [P, Hx, Hy]), nl,
   is_wumpus(W), wumpus(Wx, Wy),
   format('Wumpus: ~`.t ~p at ~dx~d~40|', [W, Wx, Wy]), nl,
+  has_gold(G), gold(Gx, Gy),
+  format('Gold: ~`.t~p at ~dx~d~40|', [G, Gx, Gy]), nl,
   findall([Px, Py], pit(Px, Py), Ps),
   format('Pit: ~`.t ~p~40|', [Ps]), nl.
 
 % Run the game
+run_random :-
+  random_between(2, 5, X1), random_between(2, 5, Y1), assertz(gold(X1, Y1)),
+  random_between(2, 5, X2), random_between(2, 5, Y2), assertz(wumpus(X2, Y2)),
+  random_between(2, 5, X3), random_between(2, 5, Y3), assertz(pit(X3, Y3)),
+  random_between(2, 5, X4), random_between(2, 5, Y4), assertz(pit(X4, Y4)),
+  random_between(2, 5, X5), random_between(2, 5, Y5), assertz(pit(X5, Y5)),
+  runloop(0).
+
 run :- runloop(0).
 
-runloop(100) :- write('100: Reached max allowed moves.'), nl, action(exit), !.
+runloop(200) :- write('!: Reached max allowed moves.'), nl, action(exit), !.
 runloop(T) :-
   hunter(X, Y, D), perceptions(P),
   format('~d: At ~dx~d facing ~p, senses ~p. ', [T, X, Y, D, P]),
@@ -222,6 +195,7 @@ runloop(T) :-
   % Iterate
   is_player(dead) -> (
     write('You have deceased.'), nl,
-    action(exit), !);
+    action(exit),
+    !);
   Ti is T + 1,
   runloop(Ti).
