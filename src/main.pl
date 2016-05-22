@@ -124,16 +124,23 @@ perceptions([Stench, Breeze, Glitter, Bump, Scream]) :-
 move(X, Y) :-
   assertz(actions(move)),
   in_bounds(X, Y),
-  format("- Moving to ~dx~d~n", [X,Y]),
-  assertz(visited(X, Y)),
-  hunter(_, _, D),
-  retractall(hunter(_, _, D)), % Reset the hunter pos then reassign.
+  % format("- Moving to ~dx~d~n", [X, Y]),
+  direction(X, Y, D),
+  retractall(hunter(_, _, _)),
   asserta(hunter(X, Y, D)),
+  assertz(visited(X, Y)),
   !.
-move(X, Y) :- format('- Cannot move to ~dx~d~n', [X, Y]).
+move(X, Y) :- format('!: Cannot move to ~dx~d~n', [X, Y]).
+
+% Get the direction
+direction(X, Y, D) :- hunter(Xi, Yi, _), X > Xi, Y == Yi, D = east,   !.
+direction(X, Y, D) :- hunter(Xi, Yi, _), X == Xi, Y < Yi, D = north,  !.
+direction(X, Y, D) :- hunter(Xi, Yi, _), X < Xi, Y == Yi, D = west,   !.
+direction(X, Y, D) :- hunter(Xi, Yi, _), X == Xi, Y > Yi, D = south,  !.
+direction(_, _, D) :- hunter(_, _, D).
 
 % Shoot at given position
-shoot(_, _) :- has_arrows(no), write('- I do not have arrows anymore.'), !.
+shoot(_, _) :- has_arrows(no), write('!: I do not have arrows anymore.'), !.
 shoot(X, Y) :-
   assertz(actions(shoot)),
   has_arrows(yes),
@@ -149,7 +156,7 @@ neighbors(X, Y) :- hunter(Xi, Yi, _), W is Xi-1, in_bounds(W, Yi), X is W,  Y is
 neighbors(X, Y) :- hunter(Xi, Yi, _), S is Yi-1, in_bounds(Xi, S), X is Xi, Y is S.
 
 % Player's actions
-action(exit) :- write('- Bye, bye!'), nl, print_result, nl, halt.
+action(exit) :- write('Bye, bye!'), nl, print_result, nl, halt.
 
 action([move,  X, Y]) :- move(X, Y).
 action([shoot, X, Y]) :- shoot(X, Y).
@@ -158,8 +165,8 @@ action(grab) :-
   assertz(actions(grab)),
   hunter(X, Y, _), assertz(grab(X, Y)),
   (gold(X, Y), has_gold(no)) ->
-    write('- Found gold!'), nl;
-    write('- Nothing to grab'), nl.
+    write('!: Found gold! '), nl;
+    true.
 
 % A naive random move
 action(random) :-
