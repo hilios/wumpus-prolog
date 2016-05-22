@@ -7,10 +7,9 @@
 % Inferences rules             %
 % ---------------------------- %
 % Infer pit or wumpus if sensed an danger in two adjacents blocks.
-is_dangerous(yes) :-
-  perceptions([yes, _, _, _, _]);
-  perceptions([_, yes, _, _, _]).
-is_dangerous(no).
+feels_danger(yes) :- perceptions([yes, _, _, _, _]), !.
+feels_danger(yes) :- perceptions([_, yes, _, _, _]), !.
+feels_danger(no)  :- \+feels_danger(yes).
 
 has_pit(X, Y, yes) :-
   E is X + 1, N is Y + 1, breeze_at(E, Y), breeze_at(X, N), !;
@@ -67,8 +66,8 @@ heuristic(_, [move, X, Y]) :-
   !.
 
 % Exit if have found the same place ten times
-heuristic(_, exit) :- hunter(X, Y, _), findall(1, visited(X, Y), V),
-  length(V, L), L > 10, write('I Give up! ').
+% heuristic(_, exit) :- hunter(X, Y, _), findall(1, visited(X, Y), V),
+%   length(V, L), L > 30, write('I Give up! ').
 
 heuristic(_, [move, X, Y]) :-
   safest_path(X, Y),
@@ -84,15 +83,17 @@ safest_path(X, Y) :-
   index_of(L, Min, I),
   neighbors(N), nth0(I, N, [X, Y]).
 
-neighbors_cost(C) :- neighbors(X, Y), cost(X, Y, C).
+neighbors_cost(C) :- neighbors(X, Y), sum_cost(X, Y, C).
 
-% Cost predicate
-cost(X, Y, C) :- \+visited(X, Y), has_gold(yes), C is -5, !.
-cost(X, Y, C) :- visited(X, Y),         C is 5,   !.
-cost(X, Y, C) :- has_pit(X, Y, yes),    C is 100, !.
-cost(X, Y, C) :- has_wumpus(X, Y, yes), C is 100, !.
-cost(_, _, C) :- is_dangerous(yes),     C is 10,  !.
-cost(_, _, C) :- C is 0.
+% Cost predicates
+sum_cost(X, Y, C) :- findall(Ci, cost(X, Y, Ci), Cs), sum_list(Cs, C).
+
+cost(X, Y, C) :- hunter(_, _, Di), direction(X, Y, D), Di \== D, C is 1.
+cost(X, Y, C) :- visited(X, Y), has_gold(yes),        C is -5.
+cost(X, Y, C) :- visited(X, Y), has_gold(no),         C is +5.
+cost(X, Y, C) :- \+visited(X, Y), feels_danger(yes),  C is 10.
+cost(X, Y, C) :- has_pit(X, Y, yes),    C is 100.
+cost(X, Y, C) :- has_wumpus(X, Y, yes), C is 100.
 
 % Get the first occurence of certain value
 index_of([H|_], H, 0):- !.
